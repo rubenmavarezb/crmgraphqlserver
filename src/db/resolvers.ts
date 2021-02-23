@@ -1,14 +1,35 @@
 import User, { UserI } from '../models/User';
 import bcryptjs from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+
+require('dotenv').config({ path: 'variables.env'});
 
 interface Input {
     input: UserI
 }
 
+interface Token {
+    token: string;
+}
+
+
+const createToken = (user: UserI, secret: string, expiration: string) => {
+    console.log(user);
+
+    const { id, email, name, lastname } = user;
+
+    return jwt.sign({ id, email, name, lastname }, secret, { expiresIn: expiration})
+}
+
 //Resolvers
 const resolvers = {
     Query: {
-        getCourses: () => 'Hola'
+        getUser: async(_:any, {token}: Token) => {
+
+            const userId = await jwt.verify(token, process.env.SECRET!);
+
+            return userId
+        }
     },
     Mutation: {
         newUser: async (_: any, {input}:Input) => {
@@ -35,6 +56,25 @@ const resolvers = {
                 return user;
             } catch (error) {
                 console.log(error)
+            }
+        },
+        authenticateUser: async(_:any, {input}:Input) => {
+            const { email, password } = input;
+
+            const userExists = await User.findOne({email});
+
+            if(!userExists) {
+                throw new Error('User does not exists')
+            }
+
+            const correctPasword = await bcryptjs.compare(password, userExists.password);
+
+            if(!correctPasword) {
+                throw new Error('Password is incorrect');
+            }
+
+            return {
+                token: createToken(userExists, process.env.SECRET!, '24h')
             }
         }
     }
