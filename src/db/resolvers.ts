@@ -1,16 +1,13 @@
-import User, { UserI } from '../models/User';
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-
+/////////////////////////////////////////////////////////////////
+import User, { UserI } from '../models/User';
+import Product from '../models/Product';
+////////////////////////////////////////////////////////////////
+import { UserInput, ProductInput, Token } from '../interfaces';
+////////////////////////////////////////////////////////////////
 require('dotenv').config({ path: 'variables.env'});
-
-interface Input {
-    input: UserI
-}
-
-interface Token {
-    token: string;
-}
+///////////////////////////////////////////////////////////////
 
 
 const createToken = (user: UserI, secret: string, expiration: string) => {
@@ -24,15 +21,37 @@ const createToken = (user: UserI, secret: string, expiration: string) => {
 //Resolvers
 const resolvers = {
     Query: {
+        //User
         getUser: async(_:any, {token}: Token) => {
 
             const userId = await jwt.verify(token, process.env.SECRET!);
 
             return userId
+        },
+        //Products
+        getProducts: async () => {
+            try {
+                const products = await Product.find({});
+
+                return products;
+            } catch (error) {
+                console.log(error)
+            }
+        },
+        getProduct: async (_:any, { id }:ProductInput) => {
+
+            const product = await Product.findById(id);
+
+            if(!product) {
+                throw new Error('Product not found');
+            }
+
+            return product;
         }
     },
     Mutation: {
-        newUser: async (_: any, {input}:Input) => {
+        //User
+        newUser: async (_: any, {input}:UserInput) => {
             
             const { email, password } = input;
 
@@ -58,7 +77,7 @@ const resolvers = {
                 console.log(error)
             }
         },
-        authenticateUser: async(_:any, {input}:Input) => {
+        authenticateUser: async(_:any, {input}:UserInput) => {
             const { email, password } = input;
 
             const userExists = await User.findOne({email});
@@ -76,6 +95,42 @@ const resolvers = {
             return {
                 token: createToken(userExists, process.env.SECRET!, '24h')
             }
+        },
+        //Product
+        newProduct: async(_:any, {input}:ProductInput) => {
+            try {
+                const product = new Product(input);
+                const result = await product.save();
+
+                return result;
+            } catch (error) {
+                console.log(error)
+            }
+        },
+        updateProduct: async (_:any, {id, input}:ProductInput) => {
+
+            let product = await Product.findById(id);
+
+            if(!product) {
+                throw new Error('Product not found');
+            }
+
+            product = await Product.findOneAndUpdate({_id: id}, input, {new: true});
+
+            return product;
+
+        },
+        deleteProduct: async(_:any, {id}:ProductInput) => {
+
+            const product = await Product.findById(id);
+
+            if(!product) {
+                throw new Error('Product not found');
+            }
+
+            await Product.findOneAndDelete({_id: id});
+
+            return "Product deleted!"
         }
     }
 }
