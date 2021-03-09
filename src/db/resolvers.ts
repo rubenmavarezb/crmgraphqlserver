@@ -3,8 +3,9 @@ import jwt from 'jsonwebtoken';
 /////////////////////////////////////////////////////////////////
 import User, { UserI } from '../models/User';
 import Product from '../models/Product';
+import Client from '../models/Client';
 ////////////////////////////////////////////////////////////////
-import { UserInput, ProductInput, Token } from '../interfaces';
+import { UserInput, ProductInput, ClientInput, Token, UserCtx } from '../interfaces';
 ////////////////////////////////////////////////////////////////
 require('dotenv').config({ path: 'variables.env'});
 ///////////////////////////////////////////////////////////////
@@ -22,9 +23,9 @@ const createToken = (user: UserI, secret: string, expiration: string) => {
 const resolvers = {
     Query: {
         //User
-        getUser: async(_:any, {token}: Token) => {
+        getUser: async(_:null, {token}: Token) => {
 
-            const userId = await jwt.verify(token, process.env.SECRET!);
+            const userId = jwt.verify(token, process.env.SECRET!);
 
             return userId
         },
@@ -38,7 +39,7 @@ const resolvers = {
                 console.log(error)
             }
         },
-        getProduct: async (_:any, { id }:ProductInput) => {
+        getProduct: async (_:null, { id }:ProductInput) => {
 
             const product = await Product.findById(id);
 
@@ -47,11 +48,41 @@ const resolvers = {
             }
 
             return product;
+        },
+        //Clients
+        getClients: async () => {
+            try {
+                const clients = await Client.find({});
+                return clients
+            } catch (error) {
+                console.log(error)
+            }
+        },
+        getClientsSeller: async (_: null, {}, ctx: UserCtx) => {
+            try {
+                const clients = await Client.find({ seller: ctx.user.id.toString() })
+                return clients
+            } catch (error) {
+                console.log(error)
+            }
+        },
+        getClient: async (_:null, {id}: ClientInput, ctx: UserCtx ) => {
+            const client = await Client.findById(id);
+
+            if(!client) {
+                throw new Error('Client does not exists')
+            }
+
+            if(client.seller.toString() !== ctx.user.id) {
+                throw new Error("You don't have permissions")
+            }
+
+            return client
         }
     },
     Mutation: {
-        //User
-        newUser: async (_: any, {input}:UserInput) => {
+        //User - Seller
+        newUser: async (_: null, {input}:UserInput) => {
             
             const { email, password } = input;
 
@@ -77,7 +108,7 @@ const resolvers = {
                 console.log(error)
             }
         },
-        authenticateUser: async(_:any, {input}:UserInput) => {
+        authenticateUser: async(_:null, {input}:UserInput) => {
             const { email, password } = input;
 
             const userExists = await User.findOne({email});
@@ -97,7 +128,7 @@ const resolvers = {
             }
         },
         //Product
-        newProduct: async(_:any, {input}:ProductInput) => {
+        newProduct: async(_:null, {input}:ProductInput) => {
             try {
                 const product = new Product(input);
                 const result = await product.save();
@@ -107,7 +138,7 @@ const resolvers = {
                 console.log(error)
             }
         },
-        updateProduct: async (_:any, {id, input}:ProductInput) => {
+        updateProduct: async (_:null, {id, input}:ProductInput) => {
 
             let product = await Product.findById(id);
 
@@ -120,7 +151,7 @@ const resolvers = {
             return product;
 
         },
-        deleteProduct: async(_:any, {id}:ProductInput) => {
+        deleteProduct: async(_:null, {id}:ProductInput) => {
 
             const product = await Product.findById(id);
 
@@ -131,6 +162,31 @@ const resolvers = {
             await Product.findOneAndDelete({_id: id});
 
             return "Product deleted!"
+        },
+        //Client
+        newClient: async(_:null, {input}:ClientInput, ctx: UserCtx) => {
+
+            const { email } = input;
+
+            const client = await Client.findOne({ email });
+
+            if(client) {
+                throw new Error('Client already exists');
+            }
+
+            const newClient = new Client(input);
+
+            newClient.seller = ctx.user.id;
+
+
+            try {
+                const result = await newClient.save();
+    
+                return result; 
+            } catch (error) {
+                console.log(error)
+            }
+
         }
     }
 }

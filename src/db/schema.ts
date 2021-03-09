@@ -1,5 +1,5 @@
 import { gql } from 'apollo-server';
-
+////////////////////////////////////
 
 //Schema
 const typeDefs = gql`
@@ -24,6 +24,16 @@ const typeDefs = gql`
         created: String
     }
 
+    type Client {
+        id: ID
+        name: String
+        lastname: String
+        company: String
+        email: String
+        phone: String
+        seller: ID
+    }
+
     input UserInput {
         name: String!
         lastname: String!
@@ -42,6 +52,14 @@ const typeDefs = gql`
         password: String!
     }
 
+    input ClientInput {
+        name: String!
+        lastname: String!
+        company: String!
+        email: String!
+        phone: String
+    }
+
     type Query {
         #Users
         getUser(token: String!): User
@@ -49,6 +67,11 @@ const typeDefs = gql`
         #Products
         getProducts: [Product]
         getProduct(id: ID!): Product
+
+        #Clients
+        getClients: [Client]
+        getClientsSeller: [Client]
+        getClient(id: ID!): Client
     }
 
     type Mutation {
@@ -60,6 +83,9 @@ const typeDefs = gql`
         newProduct(input: ProductInput): Product
         updateProduct(id: ID!, input: ProductInput): Product
         deleteProduct(id: ID!): String
+
+        #Clients
+        newClient(input: ClientInput): Client
     }
 `;
 
