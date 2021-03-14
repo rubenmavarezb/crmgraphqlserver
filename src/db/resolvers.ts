@@ -187,6 +187,34 @@ const resolvers = {
                 console.log(error)
             }
 
+        },
+        updateClient: async (_:null, {id, input}:ClientInput, ctx: UserCtx) => {
+            let client = await Client.findById(id);
+
+            if(!client) {
+                throw new Error('The client you are looking for does not exists in our database');
+            }
+
+            if(client.seller.toString() !== ctx.user.id) {
+                throw new Error("You don't have permissions")
+            }
+
+            client = await Client.findOneAndUpdate({_id: id}, input, {new: true})
+        },
+        deleteClient: async (_:null, {id}:ClientInput, ctx: UserCtx) => {
+            let client = await Client.findById(id);
+
+            if(!client) {
+                throw new Error('The client you are looking for does not exists in our database');
+            }
+
+            if(client.seller.toString() !== ctx.user.id) {
+                throw new Error("You don't have permissions")
+            }
+
+            await Client.findOneAndDelete({_id: id});
+
+            return "Client deleted";
         }
     }
 }
