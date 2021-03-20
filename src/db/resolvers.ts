@@ -2,10 +2,17 @@ import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 /////////////////////////////////////////////////////////////////
 import User, { UserI } from '../models/User';
-import Product from '../models/Product';
+import Product, {ProductI} from '../models/Product';
 import Client from '../models/Client';
+import Order from '../models/Order';
 ////////////////////////////////////////////////////////////////
-import { UserInput, ProductInput, ClientInput, Token, UserCtx } from '../interfaces';
+import { UserInput,
+        ProductInput, 
+        ClientInput, 
+        OrderInput, 
+        Token, 
+        UserCtx, 
+        ProductOrderI } from '../interfaces';
 ////////////////////////////////////////////////////////////////
 require('dotenv').config({ path: 'variables.env'});
 ///////////////////////////////////////////////////////////////
@@ -215,6 +222,48 @@ const resolvers = {
             await Client.findOneAndDelete({_id: id});
 
             return "Client deleted";
+        },
+        //Orders
+        newOrder: async(_:null, {input}:OrderInput, ctx: UserCtx) => {
+
+            const { client, order } = input
+
+            console.log(input)
+
+            let clientExists = await Client.findById(client);
+
+            if(!clientExists) {
+                throw new Error('The client you are looking for does not exists in our database');
+            }
+
+            if(clientExists.seller.toString() !== ctx.user.id) {
+                throw new Error("You don't have permissions")
+            }
+
+            let article: ProductOrderI;
+
+            for await (article of order) {
+                const { id, quantity } = article;
+
+                const product = await Product.findById(id);
+
+                if(product) {
+                    if(product && quantity > product.stock) {
+                        throw new Error(`Article: ${product.name} exceeds the quantity available in stock`);
+                    } else {
+                        product.stock -= quantity;
+                        await product.save();
+                    }
+                }
+            }
+
+            const newOrder = new Order(input);
+
+            newOrder.seller = ctx.user.id;
+
+            const result = await newOrder.save();
+
+            return result;
         }
     }
 }

@@ -1,14 +1,11 @@
 import { UserI } from '../models/User';
 import { ProductI } from '../models/Product';
 import { ClientI } from '../models/Client';
+import { OrderI } from '../models/Order';
 //////////////////////////////////////////////
 
 export interface UserInput {
     input: UserI
-}
-
-export interface Token {
-    token: string;
 }
 
 export interface ProductInput {
@@ -21,6 +18,18 @@ export interface ClientInput {
     id: string;
 }
 
+export interface OrderInput {
+    input: OrderI
+}
+
+export interface Token {
+    token: string;
+}
+
 export interface UserCtx {
-    user: UserI
+    user: UserI;
+}
+
+export interface ProductOrderI extends ProductI {
+    quantity: number;
 }
