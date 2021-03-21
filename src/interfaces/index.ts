@@ -11,6 +11,7 @@ export interface UserInput {
 export interface ProductInput {
     input: ProductI;
     id: string;
+    searchtext: string;
 }
 
 export interface ClientInput {
@@ -19,7 +20,9 @@ export interface ClientInput {
 }
 
 export interface OrderInput {
-    input: OrderI
+    input: OrderI;
+    id: string;
+    state: string;
 }
 
 export interface Token {

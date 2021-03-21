@@ -27,7 +27,7 @@ const server = new ApolloServer({
                     user
                 }
             } catch (error) {
-                
+                console.log(error)
             }
         }
 

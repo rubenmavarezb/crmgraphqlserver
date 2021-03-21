@@ -85,6 +85,98 @@ const resolvers = {
             }
 
             return client
+        },
+        //Orders
+        getOrders: async () => {
+            try {
+                const orders = await Order.find({});
+                return orders;
+            } catch (error) {
+                console.log(error)
+            }
+        },
+        getOrdersBySeller: async(_:null, {}, ctx: UserCtx) => {
+            try {
+                const orders = await Order.find({ seller: ctx.user.id });
+                return orders
+            } catch (error) {
+                console.log(error)
+            }
+        },
+        getOrder: async(_:null, {id}: OrderInput, ctx: UserCtx) => {
+            const order = await Order.findById(id);
+
+            if(!order) {
+                throw new Error("Order not found");
+            }
+
+            if(order.seller.toString() !== ctx.user.id) {
+                throw new Error('Access denied');
+            }
+
+            return order
+        },
+        getOrdersByState: async (_:null, { state }:OrderInput, ctx: UserCtx) => {
+
+            const orders = await Order.find({ seller: ctx.user.id, state });
+
+            return orders;
+        },
+        //Custom searchs
+        bestClients: async() => {
+            const clients = await Order.aggregate([
+                { $match: { state: "COMPLETED" } },
+                { $group: {
+                    _id: "$client",
+                    total: { $sum: '$total' }
+                }},
+                {
+                    $lookup: {
+                        from: 'client',
+                        localField: '_id',
+                        foreignField: '_id', 
+                        as: 'client'
+                    }
+                },
+                {
+                    $limit: 3
+                },
+                {
+                    $sort: { total: -1}
+                }
+            ]);
+
+            return clients;
+        },
+        bestSellers: async() => {
+            const sellers = await Order.aggregate([
+                { $match: { state: 'COMPLETED'} },
+                { $group: {
+                    _id: '$seller',
+                    total: { $sum: '$total' }
+                }},
+                {
+                    $lookup: {
+                       from: 'users',
+                       localField: '_id',
+                       foreignField: '_id',
+                       as: 'seller'
+                    }
+                },
+                {
+                    $limit: 3
+                },
+                {
+                    $sort: { total: -1}
+                }
+            ]);
+
+            return sellers;
+        },
+        searchProducts: async(_: null, {searchtext}:ProductInput) => {
+            const products = await Product.find({ $text: { $search: searchtext }}).limit(10);
+
+            return products
         }
     },
     Mutation: {
@@ -228,8 +320,6 @@ const resolvers = {
 
             const { client, order } = input
 
-            console.log(input)
-
             let clientExists = await Client.findById(client);
 
             if(!clientExists) {
@@ -264,6 +354,62 @@ const resolvers = {
             const result = await newOrder.save();
 
             return result;
+        },
+        updateOrder: async (_:null, {id, input}:OrderInput, ctx: UserCtx) => {
+
+            const orderExists = await Order.findById(id);
+
+            if(!orderExists) {
+                throw new Error("Order doesn't exists");
+            }
+
+            const { client, order } = input;
+            const clientExists = await Client.findById(client);
+
+            if(!clientExists) {
+                throw new Error("Client doesn't exists");
+            }
+
+            if(clientExists.seller.toString() !== ctx.user.id) {
+                throw new Error("You don't have permissions");
+            }
+
+            if(order) {
+                let article: ProductOrderI;
+                for await (article of order) {
+                    const { id, quantity } = article;
+    
+                    const product = await Product.findById(id);
+    
+                    if(product) {
+                        if(product && quantity > product.stock) {
+                            throw new Error(`Article: ${product.name} exceeds the quantity available in stock`);
+                        } else {
+                            product.stock -= quantity;
+                            await product.save();
+                        }
+                    }
+                }
+            }
+
+            const result = await Order.findOneAndUpdate({_id: id}, input, { new: true })
+            return result
+            
+        },
+        deleteOrder: async (_:null, {id}:OrderInput, ctx: UserCtx) => {
+            const orderExists = await Order.findById(id);
+
+            if(!orderExists) {
+                throw new Error("Order doesn't exists");
+            }
+
+            if(orderExists.seller.toString() !== ctx.user.id ) {
+                throw new Error("You don't have credentials");
+            }
+
+            await Order.findOneAndDelete({_id: id});
+
+            return 'Order deleted!'
         }
     }
 }
