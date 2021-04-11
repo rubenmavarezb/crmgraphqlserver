@@ -30,11 +30,8 @@ const createToken = (user: UserI, secret: string, expiration: string) => {
 const resolvers = {
     Query: {
         //User
-        getUser: async(_:null, {token}: Token) => {
-
-            const userId = jwt.verify(token, process.env.SECRET!);
-
-            return userId
+        getUser: async(_:null, {}, ctx:UserCtx) => {
+            return ctx.user;
         },
         //Products
         getProducts: async () => {
