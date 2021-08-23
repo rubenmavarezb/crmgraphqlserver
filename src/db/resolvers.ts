@@ -295,7 +295,9 @@ const resolvers = {
                 throw new Error("You don't have permissions")
             }
 
-            client = await Client.findOneAndUpdate({_id: id}, input, {new: true})
+            client = await Client.findOneAndUpdate({_id: id}, input, {new: true});
+
+            return client;
         },
         deleteClient: async (_:null, {id}:ClientInput, ctx: UserCtx) => {
             let client = await Client.findById(id);
