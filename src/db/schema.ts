@@ -57,7 +57,7 @@ const typeDefs = gql`
 
     type BestSeller {
         total: Float
-        client: [Client]
+        seller: [User]
     }
 
     input UserInput {

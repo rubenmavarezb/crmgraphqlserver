@@ -19,7 +19,6 @@ require('dotenv').config({ path: 'variables.env'});
 
 
 const createToken = (user: UserI, secret: string, expiration: string) => {
-    console.log(user);
 
     const { id, email, name, lastname } = user;
 
@@ -129,7 +128,7 @@ const resolvers = {
                 }},
                 {
                     $lookup: {
-                        from: 'client',
+                        from: 'clients',
                         localField: '_id',
                         foreignField: '_id', 
                         as: 'client'
@@ -164,10 +163,9 @@ const resolvers = {
                     $limit: 3
                 },
                 {
-                    $sort: { total: -1}
+                    $sort: { total: -1, _id:1}
                 }
             ]);
-
             return sellers;
         },
         searchProducts: async(_: null, {searchtext}:ProductInput) => {
