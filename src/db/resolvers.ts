@@ -94,7 +94,7 @@ const resolvers = {
         },
         getOrdersBySeller: async(_:null, {}, ctx: UserCtx) => {
             try {
-                const orders = await Order.find({ seller: ctx.user.id });
+                const orders = await Order.find({ seller: ctx.user.id }).populate('client');
                 return orders
             } catch (error) {
                 console.log(error)
